@@ -49,7 +49,16 @@ func AddBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateBook(w http.ResponseWriter, r *http.Request) {
-	log.Println("Update a books")
+	var book models.Book
+	_ = json.NewDecoder(r.Body).Decode(&book)
+
+	for idx, item := range books {
+		if item.ID == book.ID {
+			books[idx] = book
+		}
+	}
+
+	json.NewEncoder(w).Encode(book)
 }
 
 func DeleteBook(w http.ResponseWriter, r *http.Request) {
