@@ -39,7 +39,13 @@ func GetBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func AddBook(w http.ResponseWriter, r *http.Request) {
-	log.Println("Add a books")
+	var book models.Book
+	_ = json.NewDecoder(r.Body).Decode(&book)
+
+	books = append(books, book)
+
+	json.NewEncoder(w).Encode(book)
+
 }
 
 func UpdateBook(w http.ResponseWriter, r *http.Request) {
