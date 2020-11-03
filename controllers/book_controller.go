@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"udemy-go-books/models"
@@ -62,5 +61,17 @@ func UpdateBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteBook(w http.ResponseWriter, r *http.Request) {
-	log.Println("Delete a books")
+	param := mux.Vars(r)
+	id, err := strconv.Atoi(param["id"])
+	if err != nil {
+		panic(err.Error())
+	}
+
+	for i, item := range books {
+		if item.ID == id {
+			books = append(books[:i], books[i+1:]...)
+		}
+	}
+
+	json.NewEncoder(w).Encode(books)
 }
