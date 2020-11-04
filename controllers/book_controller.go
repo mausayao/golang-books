@@ -2,76 +2,52 @@ package controllers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
-	"strconv"
+	"udemy-go-books/db"
 	"udemy-go-books/models"
-
-	"github.com/gorilla/mux"
 )
 
-var books []models.Book
-
-func LoadData() {
-	books = append(books, models.Book{ID: 1, Title: "Golang pointers", Author: "Mr Golang", Year: "2010"},
-		models.Book{ID: 2, Title: "Goroutines", Author: "Mr Goroutine", Year: "2011"},
-		models.Book{ID: 3, Title: "Golang routers", Author: "Mr router", Year: "2012"},
-		models.Book{ID: 4, Title: "Golang concurrency", Author: "Mr Currency", Year: "2013"},
-		models.Book{ID: 5, Title: "Golang good parts", Author: "Mr Good", Year: "2014"})
-}
-
 func GetBooks(w http.ResponseWriter, r *http.Request) {
+	var book models.Book
+	var books []models.Book
+	db := db.Init()
+
+	rows, err := db.Query("select * from book")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for rows.Next() {
+		err := rows.Scan(&book.ID, &book.Title, &book.Author, &book.YearLaunch)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		books = append(books, book)
+	}
+
 	json.NewEncoder(w).Encode(books)
 }
 
 func GetBook(w http.ResponseWriter, r *http.Request) {
-	param := mux.Vars(r)
-	id, err := strconv.Atoi(param["id"])
-	if err != nil {
-		panic(err.Error())
-	}
-
-	for _, book := range books {
-		if book.ID == id {
-			json.NewEncoder(w).Encode(book)
-		}
-	}
+	// param := mux.Vars(r)
+	// id, err := strconv.Atoi(param["id"])
 }
 
 func AddBook(w http.ResponseWriter, r *http.Request) {
-	var book models.Book
-	_ = json.NewDecoder(r.Body).Decode(&book)
-
-	books = append(books, book)
-
-	json.NewEncoder(w).Encode(book)
+	// var book models.Book
+	// _ = json.NewDecoder(r.Body).Decode(&book)
 
 }
 
 func UpdateBook(w http.ResponseWriter, r *http.Request) {
-	var book models.Book
-	_ = json.NewDecoder(r.Body).Decode(&book)
-
-	for idx, item := range books {
-		if item.ID == book.ID {
-			books[idx] = book
-		}
-	}
-
-	json.NewEncoder(w).Encode(book)
+	// var book models.Book
+	// _ = json.NewDecoder(r.Body).Decode(&book)
 }
 
 func DeleteBook(w http.ResponseWriter, r *http.Request) {
-	param := mux.Vars(r)
-	id, err := strconv.Atoi(param["id"])
-	if err != nil {
-		panic(err.Error())
-	}
-
-	for i, item := range books {
-		if item.ID == id {
-			books = append(books[:i], books[i+1:]...)
-		}
-	}
-
-	json.NewEncoder(w).Encode(books)
+	// param := mux.Vars(r)
+	// id, err := strconv.Atoi(param["id"])
 }
