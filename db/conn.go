@@ -1,7 +1,7 @@
 package db
 
 import (
-	_ "database/sql"
+	"database/sql"
 	"log"
 	"os"
 
@@ -9,14 +9,23 @@ import (
 	"github.com/subosito/gotenv"
 )
 
-func Init() {
-	gotenv.Load()
-	pgURL, err := pq.ParseURL(os.Getenv("PG_URL"))
-
+func logFatal(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
 
-	log.Println(pgURL)
+func Init() *sql.DB {
+	gotenv.Load()
+	pgURL, err := pq.ParseURL(os.Getenv("PG_URL"))
 
+	logFatal(err)
+
+	db, err := sql.Open("postgres", pgURL)
+	logFatal(err)
+
+	err = db.Ping()
+	logFatal(err)
+
+	return db
 }

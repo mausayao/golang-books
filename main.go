@@ -11,6 +11,7 @@ import (
 func main() {
 	controllers.LoadData()
 	route := routes.LoadRoute()
-	db.Init()
+	bd := db.Init()
+	log.Println(bd.Ping())
 	log.Fatal(http.ListenAndServe(":8000", route))
 }
