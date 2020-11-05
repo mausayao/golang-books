@@ -1,112 +1,146 @@
 package controllers
 
 import (
+	"database/sql"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
-	"udemy-go-books/db"
 	"udemy-go-books/models"
+	bookrepository "udemy-go-books/repository/book"
+	"udemy-go-books/utils"
 
 	"github.com/gorilla/mux"
 )
 
-func GetBooks(w http.ResponseWriter, r *http.Request) {
-	var book models.Book
-	var books []models.Book
-	db := db.Init()
+type BookController struct{}
 
-	rows, err := db.Query("select * from book")
+func (c BookController) GetBooks(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var book models.Book
+		var error models.Error
+		books := []models.Book{}
 
-	if err != nil {
-		log.Fatal(err)
-	}
+		bookRepo := bookrepository.BookRepository{}
+		books, err := bookRepo.GetBooks(db, book, books)
 
-	for rows.Next() {
-		err := rows.Scan(&book.ID, &book.Title, &book.Author, &book.YearLaunch)
 		if err != nil {
-			log.Fatal(err)
+			error.Message = "Server error"
+			utils.SendError(w, http.StatusInternalServerError, error)
+			return
 		}
 
-		books = append(books, book)
+		w.Header().Set("Content-Type", "Application/json")
+		utils.SendSuccess(w, books)
 	}
-
-	rows.Close()
-
-	json.NewEncoder(w).Encode(books)
 }
 
-func GetBook(w http.ResponseWriter, r *http.Request) {
-	param := mux.Vars(r)
-	id, err := strconv.Atoi(param["id"])
+func (c BookController) GetBook(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		param := mux.Vars(r)
+		var book models.Book
+		var error models.Error
+		id, err := strconv.Atoi(param["id"])
 
-	var book models.Book
+		bookRepo := bookrepository.BookRepository{}
+		book, err = bookRepo.GetBook(db, book, id)
 
-	if err != nil {
-		log.Panic(err)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				error.Message = "Not found"
+				utils.SendError(w, http.StatusNotFound, error)
+				return
+			} else {
+				error.Message = "Server error"
+				utils.SendError(w, http.StatusInternalServerError, error)
+				return
+			}
+
+		}
+
+		w.Header().Set("Content-Type", "Application/json")
+		utils.SendSuccess(w, book)
+
 	}
-
-	db := db.Init()
-
-	row := db.QueryRow("select * from book where id=$1", id)
-
-	err = row.Scan(&book.ID, &book.Title, &book.Author, &book.YearLaunch)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	json.NewEncoder(w).Encode(book)
-
 }
 
-func AddBook(w http.ResponseWriter, r *http.Request) {
-	var book models.Book
-	var bookID int
+func (c BookController) AddBook(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var book models.Book
+		var bookID int
+		var error models.Error
 
-	json.NewDecoder(r.Body).Decode(&book)
-	db := db.Init()
+		json.NewDecoder(r.Body).Decode(&book)
 
-	err := db.QueryRow(
-		"insert into book (title, author, year_launch) values ($1, $2, $3) RETURNING id;", book.Title, book.Author, book.YearLaunch).Scan(&bookID)
+		if book.Author == "" || book.Title == "" || book.YearLaunch == "" {
+			error.Message = "Enter missing fields"
+			utils.SendError(w, http.StatusBadRequest, error)
+			return
+		}
 
-	if err != nil {
-		log.Fatal(err)
+		bookRepo := bookrepository.BookRepository{}
+		bookID, err := bookRepo.AddBook(db, book)
+
+		if err != nil {
+			error.Message = "Server error"
+			utils.SendError(w, http.StatusInternalServerError, error)
+			return
+		}
+
+		w.Header().Set("Content-Type", "Application/json")
+		utils.SendSuccess(w, bookID)
+
 	}
-
-	json.NewEncoder(w).Encode(bookID)
-
 }
 
-func UpdateBook(w http.ResponseWriter, r *http.Request) {
-	var book models.Book
-	json.NewDecoder(r.Body).Decode(&book)
-	db := db.Init()
+func (c BookController) UpdateBook(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var book models.Book
+		var error models.Error
+		json.NewDecoder(r.Body).Decode(&book)
 
-	result, err := db.Exec("update book set title=$1, author=$2, year_launch=$3 where id=$4 RETURNING id", &book.Title, &book.Author, &book.YearLaunch, &book.ID)
+		if book.ID == 0 || book.Author == "" || book.Title == "" || book.YearLaunch == "" {
+			error.Message = "All fields are required."
+			utils.SendError(w, http.StatusBadRequest, error)
+			return
+		}
 
-	rowsUpdated, err := result.RowsAffected()
-	if err != nil {
-		log.Fatal(err)
+		bookRepo := bookrepository.BookRepository{}
+		rowsUpdated, err := bookRepo.UpdateBook(db, book)
+
+		if err != nil {
+			error.Message = "Server error"
+			utils.SendError(w, http.StatusInternalServerError, error)
+			return
+		}
+
+		w.Header().Set("Content-Type", "Application/json")
+		utils.SendSuccess(w, rowsUpdated)
+
 	}
-
-	json.NewEncoder(w).Encode(rowsUpdated)
-
 }
 
-func DeleteBook(w http.ResponseWriter, r *http.Request) {
-	param := mux.Vars(r)
-	id, err := strconv.Atoi(param["id"])
+func (c BookController) DeleteBook(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var error models.Error
+		param := mux.Vars(r)
+		id, _ := strconv.Atoi(param["id"])
 
-	db := db.Init()
+		bookRepo := bookrepository.BookRepository{}
+		rowsDeleted, err := bookRepo.DeleteBook(db, id)
 
-	result , err := db.Exec("delete from book where id=$1", id)
-	
-	rowsDeleted, err := result.RowsAffected()
+		if err != nil {
+			error.Message = "Server error"
+			utils.SendError(w, http.StatusInternalServerError, error)
+			return
+		}
 
-	if err != nil {
-		log.Fatal(err)
+		if rowsDeleted == 0 {
+			error.Message = "Not found"
+			utils.SendError(w, http.StatusNotFound, error)
+			return
+		}
+
+		w.Header().Set("Content-Type", "Application/json")
+		utils.SendSuccess(w, rowsDeleted)
 	}
-
-	json.NewEncoder(w).Encode(rowsDeleted)
 }

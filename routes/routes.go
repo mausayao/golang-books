@@ -2,18 +2,22 @@ package routes
 
 import (
 	"udemy-go-books/controllers"
+	"udemy-go-books/db"
 
 	"github.com/gorilla/mux"
 )
 
+var bookController = controllers.BookController{}
+var bd = db.Init()
+
 func LoadRoute() *mux.Router {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/books", controllers.GetBooks).Methods("GET")
-	router.HandleFunc("/books/{id}", controllers.GetBook).Methods("GET")
-	router.HandleFunc("/books", controllers.AddBook).Methods("POST")
-	router.HandleFunc("/books", controllers.UpdateBook).Methods("PUT")
-	router.HandleFunc("/books/{id}", controllers.DeleteBook).Methods("DELETE")
+	router.HandleFunc("/books", bookController.GetBooks(bd)).Methods("GET")
+	router.HandleFunc("/books/{id}", bookController.GetBook(bd)).Methods("GET")
+	router.HandleFunc("/books", bookController.AddBook(bd)).Methods("POST")
+	router.HandleFunc("/books", bookController.UpdateBook(bd)).Methods("PUT")
+	router.HandleFunc("/books/{id}", bookController.DeleteBook(bd)).Methods("DELETE")
 
 	return router
 
