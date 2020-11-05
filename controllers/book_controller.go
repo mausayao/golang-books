@@ -95,6 +95,18 @@ func UpdateBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteBook(w http.ResponseWriter, r *http.Request) {
-	// param := mux.Vars(r)
-	// id, err := strconv.Atoi(param["id"])
+	param := mux.Vars(r)
+	id, err := strconv.Atoi(param["id"])
+
+	db := db.Init()
+
+	result , err := db.Exec("delete from book where id=$1", id)
+	
+	rowsDeleted, err := result.RowsAffected()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	json.NewEncoder(w).Encode(rowsDeleted)
 }
