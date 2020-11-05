@@ -67,7 +67,8 @@ func AddBook(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&book)
 	db := db.Init()
 
-	err := db.QueryRow("insert into book (title, author, year_launch) values ($1, $2, $3) RETURNING id;", book.Title, book.Author, book.YearLaunch).Scan(&bookID)
+	err := db.QueryRow(
+		"insert into book (title, author, year_launch) values ($1, $2, $3) RETURNING id;", book.Title, book.Author, book.YearLaunch).Scan(&bookID)
 
 	if err != nil {
 		log.Fatal(err)
@@ -78,8 +79,19 @@ func AddBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateBook(w http.ResponseWriter, r *http.Request) {
-	// var book models.Book
-	// _ = json.NewDecoder(r.Body).Decode(&book)
+	var book models.Book
+	json.NewDecoder(r.Body).Decode(&book)
+	db := db.Init()
+
+	result, err := db.Exec("update book set title=$1, author=$2, year_launch=$3 where id=$4 RETURNING id", &book.Title, &book.Author, &book.YearLaunch, &book.ID)
+
+	rowsUpdated, err := result.RowsAffected()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	json.NewEncoder(w).Encode(rowsUpdated)
+
 }
 
 func DeleteBook(w http.ResponseWriter, r *http.Request) {
