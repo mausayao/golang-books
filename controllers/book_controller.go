@@ -48,28 +48,32 @@ func GetBook(w http.ResponseWriter, r *http.Request) {
 
 	db := db.Init()
 
-	row, err := db.Query("select * from book where id=$1", id)
+	row := db.QueryRow("select * from book where id=$1", id)
+
+	err = row.Scan(&book.ID, &book.Title, &book.Author, &book.YearLaunch)
 
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
-
-	for row.Next() {
-		err := row.Scan(&book.ID, &book.Title, &book.Author, &book.YearLaunch)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	row.Close()
 
 	json.NewEncoder(w).Encode(book)
 
 }
 
 func AddBook(w http.ResponseWriter, r *http.Request) {
-	// var book models.Book
-	// _ = json.NewDecoder(r.Body).Decode(&book)
+	var book models.Book
+	var bookID int
+
+	json.NewDecoder(r.Body).Decode(&book)
+	db := db.Init()
+
+	err := db.QueryRow("insert into book (title, author, year_launch) values ($1, $2, $3) RETURNING id;", book.Title, book.Author, book.YearLaunch).Scan(&bookID)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	json.NewEncoder(w).Encode(bookID)
 
 }
 
